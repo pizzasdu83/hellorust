@@ -1,29 +1,29 @@
-#![allow(warnings)]
+#[allow(warnings)]
 mod bindings;
 
 use bindings::Guest;
 use klave;
-use serde_json::{Value, json};
-
+use serde_json::Value;
+use serde_json::json;
 struct Component;
 
 impl Guest for Component {
 
-	fn register_routes() {
+	fn register_routes(){
 		klave::router::add_user_query("load-from-ledger");
-		klave::router::add_user_query("fetch-all-scores"); // ✅ nouvelle route
+		klave::router::add_user_query("fetch-all-scores"); 
 		klave::router::add_user_transaction("insert-in-ledger");
 	}
 
-	fn load_from_ledger(cmd: String) {
+	fn load_from_ledger(cmd: String){
 		let Ok(v) = serde_json::from_str::<Value>(&cmd) else {
 			klave::notifier::send_string(&format!("failed to parse '{}' as json", cmd));
-			return;
+			return
 		};
 		let key = v["key"].as_str().unwrap();
 		let Ok(res) = klave::ledger::get_table("my_table").get(&key) else {
 			klave::notifier::send_string(&format!("failed to read from ledger: '{}'", cmd));
-			return;
+			return
 		};
 		let msg = if res.is_empty() {
 			format!("the key '{}' was not found in table my_table", cmd)
@@ -36,11 +36,11 @@ impl Guest for Component {
 		klave::notifier::send_string(&msg);
 	}
 
-	fn insert_in_ledger(cmd: String) {
+	fn insert_in_ledger(cmd: String){
 		let Ok(v) = serde_json::from_str::<Value>(&cmd) else {
 			klave::notifier::send_string(&format!("failed to parse '{}' as json", cmd));
 			klave::router::cancel_transaction();
-			return;
+			return
 		};
 		let key = v["key"].as_str().unwrap();
 		let value = v["value"].as_str().unwrap().as_bytes();
@@ -48,7 +48,7 @@ impl Guest for Component {
 			Err(e) => {
 				klave::notifier::send_string(&format!("failed to write to ledger: '{}'", e));
 				klave::router::cancel_transaction();
-				return;
+				return
 			}
 			_ => {}
 		}
@@ -61,8 +61,7 @@ impl Guest for Component {
 		klave::notifier::send_string(&result_as_json.to_string());
 	}
 
-	// ✅ Nouvelle fonction : fetch-all-scores
-	fn fetch_all_scores(_: String) {
+	fn fetch_all_scores(_: String){
 		let mut scores = Vec::new();
 
 		let Ok(mut cursor) = klave::ledger::get_table("my_table").cursor() else {
