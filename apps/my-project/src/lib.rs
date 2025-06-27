@@ -11,7 +11,6 @@ impl Guest for Component {
 
 	fn register_routes(){
 		klave::router::add_user_query("load-from-ledger");
-		klave::router::add_user_query("fetch-all-scores"); 
 		klave::router::add_user_transaction("insert-in-ledger");
 	}
 
@@ -59,45 +58,6 @@ impl Guest for Component {
 			"value": value
 		});
 		klave::notifier::send_string(&result_as_json.to_string());
-	}
-
-	fn fetch_all_scores(_: String){
-		let mut scores = Vec::new();
-
-		let Ok(mut cursor) = klave::ledger::get_table("my_table").cursor() else {
-			klave::notifier::send_string("failed to get cursor from ledger");
-			return;
-		};
-
-		while let Some((key, val)) = cursor.next() {
-			let key_str = match std::str::from_utf8(&key) {
-				Ok(s) => s,
-				Err(_) => continue,
-			};
-
-			if key_str.starts_with("score:") {
-				let Ok(v) = serde_json::from_slice::<serde_json::Value>(&val) else {
-					continue;
-				};
-
-				let name = v["name"].as_str().unwrap_or("???").to_string();
-				let score = v["score"].as_u64().unwrap_or(0);
-
-				scores.push(json!({
-					"name": name,
-					"score": score
-				}));
-			}
-		}
-
-		scores.sort_by(|a, b| {
-			let sa = a["score"].as_u64().unwrap_or(0);
-			let sb = b["score"].as_u64().unwrap_or(0);
-			sb.cmp(&sa)
-		});
-
-		let result = json!({ "success": true, "value": scores });
-		klave::notifier::send_string(&result.to_string());
 	}
 }
 
